@@ -22,7 +22,7 @@ impl<'a> Iterator for RasnInterator<'a> {
         //
         // We first read a sequence which gives a buffer of the *Varbind Payload*, pointing to A (see diagram below)
         // The Varbind Name repr is easy to parse, as rasn::ber will take only the first required bytes to parse the object.
-        // 
+        //
         // Then we are left with a buffer pointing A that needs to point to B.
         // With a temporary reader we simulate the parsing of the Varbind Name repr to get the leftover buffer, pointing to B.
         //
@@ -54,5 +54,31 @@ impl<'a> Iterator for RasnInterator<'a> {
             name: object_name,
             value: object_value,
         })
+    }
+}
+
+pub trait TryAsOid<'a> {
+    type Error;
+
+    fn try_as_oid(&self) -> Result<asn1_rs::Oid<'a>, Self::Error>;
+}
+
+impl<'a> TryAsOid<'a> for rasn::types::ObjectIdentifier {
+    type Error = asn1_rs::OidParseError;
+
+    fn try_as_oid(&self) -> Result<asn1_rs::Oid<'a>, Self::Error> {
+        let slice: &[u32] = self;
+        let owned = slice.iter().map(|x| *x as u64).collect::<Vec<_>>();
+        asn1_rs::Oid::from(&owned)
+    }
+}
+
+impl<'a> TryAsOid<'a> for rasn::types::Oid {
+    type Error = asn1_rs::OidParseError;
+
+    fn try_as_oid(&self) -> Result<asn1_rs::Oid<'a>, Self::Error> {
+        let slice: &[u32] = self;
+        let owned = slice.iter().map(|x| *x as u64).collect::<Vec<_>>();
+        asn1_rs::Oid::from(&owned)
     }
 }
