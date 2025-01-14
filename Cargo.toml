@@ -20,6 +20,8 @@ asn1-rs = "0.6"
 snmptools = { version = "^0.1.2", optional = true }
 tokio = { version = "1.36", features = ["net"], optional = true }
 openssl = { version = "0.10", optional = true }
+rasn = { version = "0.22.2", optional = true }
+rasn-snmp = { version = "0.22.2", optional = true }
 
 [dev-dependencies]
 tokio = { version = "=1.36" }
@@ -29,3 +31,4 @@ mibs = ["dep:snmptools"]
 tokio = ["dep:tokio"]
 v3 = ["dep:openssl"]
 full = ["mibs", "tokio", "v3"]
+rasn = ["dep:rasn", "dep:rasn-snmp"]

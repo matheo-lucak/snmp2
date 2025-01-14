@@ -18,6 +18,9 @@ mod asyncsession;
 #[cfg(feature = "tokio")]
 pub use asyncsession::AsyncSession;
 
+#[cfg(feature = "rasn")]
+pub mod rasn;
+
 pub use pdu::Pdu;
 
 pub use asn1_rs::Oid;
