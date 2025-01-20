@@ -148,14 +148,12 @@ impl AsyncSession {
         pdu: &pdu::Buf,
         out: &'a mut [u8],
     ) -> Result<&'a [u8]> {
-        if let Ok(_pdu_len) = socket.send(pdu).await {
-            match socket.recv(out).await {
-                Ok(len) => Ok(&out[..len]),
-                Err(_) => Err(Error::Receive),
-            }
-        } else {
-            Err(Error::Send)
-        }
+        let _pdu_len = socket.send(pdu).await.map_err(|e| Error::Send(e.kind()))?;
+        let len = socket
+            .recv(out)
+            .await
+            .map_err(|e| Error::Receive(e.kind()))?;
+        Ok(&out[..len])
     }
 
     pub async fn get(&mut self, oid: &Oid<'_>) -> Result<Pdu> {

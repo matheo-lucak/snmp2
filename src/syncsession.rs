@@ -130,14 +130,9 @@ impl SyncSession {
         pdu: &pdu::Buf,
         out: &'a mut [u8],
     ) -> Result<&'a [u8]> {
-        if let Ok(_pdu_len) = socket.send(pdu) {
-            match socket.recv(out) {
-                Ok(len) => Ok(&out[..len]),
-                Err(_) => Err(Error::Receive),
-            }
-        } else {
-            Err(Error::Send)
-        }
+        let _pdu_len = socket.send(pdu).map_err(|e| Error::Send(e.kind()))?;
+        let len = socket.recv(out).map_err(|e| Error::Receive(e.kind()))?;
+        Ok(&out[..len])
     }
 
     #[cfg(not(feature = "v3"))]
@@ -249,6 +244,9 @@ impl SyncSession {
             self.security.as_mut(),
         )?;
         self.req_id += Wrapping(1);
+        println!("Error idx : {:?}", resp.error_index);
+        println!("Error status : {:?}", resp.error_status);
+        resp.clone().varbinds.for_each(|v| print!("Varbind: {:?}", v));
         resp.validate(MessageType::Response, req_id, &self.community)?;
         Ok(resp)
     }

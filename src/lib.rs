@@ -103,9 +103,9 @@ pub enum Error {
     AuthUpdated,
 
     /// Socket send error.
-    Send,
+    Send(std::io::ErrorKind),
     /// Socket receive error.
-    Receive,
+    Receive(std::io::ErrorKind),
     /// MIB errors
     Mib(String),
 }
@@ -132,8 +132,8 @@ impl fmt::Display for Error {
             Error::AuthUpdated => {
                 write!(f, "Security context has been updated, repeat the request")
             }
-            Error::Send => write!(f, "Socket send error"),
-            Error::Receive => write!(f, "Socket receive error"),
+            Error::Send(e) => write!(f, "Socket send error: {}", e),
+            Error::Receive(e) => write!(f, "Socket receive error: {}", e),
             Error::Mib(ref s) => write!(f, "MIB error: {}", s),
         }
     }
