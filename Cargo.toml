@@ -20,6 +20,7 @@ asn1-rs = "0.6"
 snmptools = { version = "^0.1.2", optional = true }
 tokio = { version = "1.36", features = ["net"], optional = true }
 openssl = { version = "0.10", optional = true }
+static_init = "1.0.3"
 
 [dev-dependencies]
 tokio = { version = "=1.36" }

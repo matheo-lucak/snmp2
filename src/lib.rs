@@ -108,6 +108,8 @@ pub enum Error {
     Receive(std::io::ErrorKind),
     /// MIB errors
     Mib(String),
+
+    UnexpectedReport(ReportError),
 }
 
 impl fmt::Display for Error {
@@ -135,6 +137,7 @@ impl fmt::Display for Error {
             Error::Send(e) => write!(f, "Socket send error: {}", e),
             Error::Receive(e) => write!(f, "Socket receive error: {}", e),
             Error::Mib(ref s) => write!(f, "MIB error: {}", s),
+            Error::UnexpectedReport(ref s) => write!(f, "Unexpected report: {}", s),
         }
     }
 }
@@ -155,6 +158,50 @@ impl From<std::num::TryFromIntError> for Error {
 }
 
 type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub enum ReportError {
+    UnknownSecurityModel,
+    InvalidMessage,
+    BadVersion,
+    UnsupportedSecurityLevel,
+    NotInTimeWindow,
+    UnknownUserName,
+    UnknownEngineId,
+    AuthenticationFailure,
+    DecryptionError,
+    BadContext,
+
+    UnknownReport,
+    NoVarbind,
+    NoVarbindOid,
+}
+
+impl From<ReportError> for Error {
+    fn from(e: ReportError) -> Error {
+        Error::UnexpectedReport(e)
+    }
+}
+
+impl fmt::Display for ReportError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ReportError::UnknownSecurityModel => write!(f, "unknown security model"),
+            ReportError::InvalidMessage => write!(f, "invalid message"),
+            ReportError::BadVersion => write!(f, "bad version"),
+            ReportError::UnsupportedSecurityLevel => write!(f, "unsupported security level"),
+            ReportError::NotInTimeWindow => write!(f, "not in time window"),
+            ReportError::UnknownUserName => write!(f, "unknown user name"),
+            ReportError::UnknownEngineId => write!(f, "unknown engine ID"),
+            ReportError::AuthenticationFailure => write!(f, "authentication failure"),
+            ReportError::DecryptionError => write!(f, "decryption error"),
+            ReportError::BadContext => write!(f, "bad context"),
+            ReportError::UnknownReport => write!(f, "unknown report"),
+            ReportError::NoVarbind => write!(f, "no varbind on report PDU"),
+            ReportError::NoVarbindOid => write!(f, "no varbind OID on report PDU"),
+        }
+    }
+}
 
 const BUFFER_SIZE: usize = 65_507;
 

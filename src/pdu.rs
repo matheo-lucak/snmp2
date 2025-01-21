@@ -2,7 +2,7 @@
 use crate::v3;
 use crate::{
     asn1::{self, AsnReader},
-    snmp, Error, MessageType, Oid, Result, Value, Varbinds, Version, BUFFER_SIZE,
+    snmp, Error, MessageType, Oid, ReportError, Result, Value, Varbinds, Version, BUFFER_SIZE,
 };
 use std::{
     fmt, mem,
@@ -615,9 +615,72 @@ impl<'a> Pdu<'a> {
         expected_req_id: i32,
         expected_community: &[u8],
     ) -> Result<()> {
+        if self.message_type == MessageType::Report {
+            let first_varbind = self
+                .varbinds
+                .clone()
+                .next()
+                .ok_or(Error::UnexpectedReport(ReportError::NoVarbind))?;
+            let (oid, _) = first_varbind;
+
+            if oid.starts_with(&SNMP_MPD_STATS) {
+                let last = oid
+                    .iter()
+                    .and_then(|mut node_iterator| node_iterator.nth(*SNMP_MPD_STATS_OID_LEN))
+                    .ok_or(ReportError::NoVarbindOid)?;
+
+                let error = match last {
+                    REPORT_SNMP_UNKNOWN_SECURITY_MODELS => ReportError::UnknownSecurityModel,
+                    REPORT_SNMP_INVALID_MSGS => ReportError::InvalidMessage,
+                    REPORT_SNMP_UNKNOWN_PDU_HANDLERS => ReportError::BadVersion,
+                    _ => ReportError::UnknownReport,
+                };
+
+                return Err(error.into());
+            };
+
+            if oid.starts_with(&USM_STATS) {
+                let last = oid
+                    .iter()
+                    .and_then(|mut node_iterator| node_iterator.nth(*USM_STATS_OID_LEN))
+                    .ok_or(ReportError::NoVarbindOid)?;
+
+                let error = match last {
+                    REPORT_USM_STATS_UNSUPPORTED_SEC_LEVELS => {
+                        ReportError::UnsupportedSecurityLevel
+                    }
+                    REPORT_USM_STATS_NOT_IN_TIME_WINDOWS => ReportError::NotInTimeWindow,
+                    REPORT_USM_STATS_UNKNOWN_USER_NAMES => ReportError::UnknownUserName,
+                    REPORT_USM_STATS_UNKNOWN_ENGINE_IDS => ReportError::UnknownEngineId,
+                    REPORT_USM_STATS_WRONG_DIGESTS => ReportError::AuthenticationFailure,
+                    REPORT_USM_STATS_DECRYPTION_ERRORS => ReportError::DecryptionError,
+                    _ => ReportError::UnknownReport,
+                };
+                return Err(error.into());
+            }
+
+            if oid.starts_with(&TARGET_STATS) {
+                let last = oid
+                    .iter()
+                    .and_then(|mut node_iterator| node_iterator.nth(*TARGET_STATS_OID_LEN))
+                    .ok_or(ReportError::NoVarbindOid)?;
+
+
+                let error = match last {
+                    REPORT_SNMP_UNAVAILABLE_CONTEXTS => ReportError::BadContext,
+                    REPORT_SNMP_UNKNOWN_CONTEXTS => ReportError::BadContext,
+                    _ => ReportError::UnknownReport,
+                };
+                return Err(error.into());
+            }
+
+            return Err(Error::UnexpectedReport(ReportError::UnknownReport));
+        }
+
         if self.message_type != expected_type {
             return Err(Error::AsnWrongType);
         }
+
         if self.req_id != expected_req_id {
             return Err(Error::RequestIdMismatch);
         }
@@ -627,3 +690,43 @@ impl<'a> Pdu<'a> {
         Ok(())
     }
 }
+
+use static_init::dynamic;
+
+#[dynamic]
+static SNMP_MPD_STATS: Oid<'static> =
+    Oid::from(&[1, 3, 6, 1, 6, 3, 11, 2, 1]).expect("Failed to build SNMP_MPD_STATS OID");
+#[dynamic]
+static SNMP_MPD_STATS_OID_LEN: usize = SNMP_MPD_STATS
+    .iter()
+    .map(Iterator::count)
+    .expect("Failed to get SNMP_MPD_STATS OID length");
+const REPORT_SNMP_UNKNOWN_SECURITY_MODELS: u64 = 1;
+const REPORT_SNMP_INVALID_MSGS: u64 = 2;
+const REPORT_SNMP_UNKNOWN_PDU_HANDLERS: u64 = 3;
+
+#[dynamic]
+static USM_STATS: Oid<'static> =
+    Oid::from(&[1, 3, 6, 1, 6, 3, 15, 1, 1]).expect("Failed to build SNMP_MPD_STATS OID");
+#[dynamic]
+static USM_STATS_OID_LEN: usize = USM_STATS
+    .iter()
+    .map(Iterator::count)
+    .expect("Failed to get USM_STATS OID length");
+const REPORT_USM_STATS_UNSUPPORTED_SEC_LEVELS: u64 = 1;
+const REPORT_USM_STATS_NOT_IN_TIME_WINDOWS: u64 = 2;
+const REPORT_USM_STATS_UNKNOWN_USER_NAMES: u64 = 3;
+const REPORT_USM_STATS_UNKNOWN_ENGINE_IDS: u64 = 4;
+const REPORT_USM_STATS_WRONG_DIGESTS: u64 = 5;
+const REPORT_USM_STATS_DECRYPTION_ERRORS: u64 = 6;
+
+#[dynamic]
+static TARGET_STATS: Oid<'static> =
+    Oid::from(&[1, 3, 6, 1, 6, 3, 12, 1]).expect("Failed to build SNMP_MPD_STATS OID");
+#[dynamic]
+static TARGET_STATS_OID_LEN: usize = TARGET_STATS
+    .iter()
+    .map(Iterator::count)
+    .expect("Failed to get TARGET_STATS OID length");
+const REPORT_SNMP_UNAVAILABLE_CONTEXTS: u64 = 4;
+const REPORT_SNMP_UNKNOWN_CONTEXTS: u64 = 5;

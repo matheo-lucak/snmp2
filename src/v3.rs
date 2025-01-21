@@ -524,14 +524,10 @@ impl<'a> Pdu<'a> {
 
         let mut prev_engine_time = security.engine_time();
 
-        if flags & V3_MSG_FLAGS_AUTH == 0 {
-            if security.authoritative_state.engine_id.is_empty() {
-                security.authoritative_state.engine_id = engine_id.to_vec();
-                security.update_key()?;
-                is_discovery = true;
-            } else if security.need_auth() {
-                return Err(Error::AuthFailure(AuthErrorKind::NotAuthenticated));
-            }
+        if flags & V3_MSG_FLAGS_AUTH == 0 && security.authoritative_state.engine_id.is_empty() {
+            security.authoritative_state.engine_id = engine_id.to_vec();
+            security.update_key()?;
+            is_discovery = true;
         } else {
             if security.authoritative_state.engine_boots == 0 && engine_boots == 0 {
                 return Err(Error::AuthFailure(AuthErrorKind::EngineBootsNotProvided));
@@ -560,15 +556,17 @@ impl<'a> Pdu<'a> {
             } else if engine_id != security.authoritative_state.engine_id {
                 return Err(Error::AuthFailure(AuthErrorKind::EngineIdMismatch));
             }
-            if auth_params.len() != 12 || auth_params_pos + auth_params.len() > bytes.len() {
-                return Err(Error::ValueOutOfRange);
-            }
-            unsafe {
-                let auth_params_ptr = bytes.as_ptr().add(auth_params_pos) as *mut u8;
-                std::ptr::write_bytes(auth_params_ptr, 0, auth_params.len());
-            }
 
-            if security.need_auth() {
+            if flags & V3_MSG_FLAGS_AUTH != 0 {
+
+                if auth_params.len() != 12 || auth_params_pos + auth_params.len() > bytes.len() {
+                    return Err(Error::ValueOutOfRange);
+                }
+                unsafe {
+                    let auth_params_ptr = bytes.as_ptr().add(auth_params_pos) as *mut u8;
+                    std::ptr::write_bytes(auth_params_ptr, 0, auth_params.len());
+                }
+
                 let hmac = security.calculate_hmac(bytes)?;
 
                 if hmac.len() < 12 || hmac[..12] != auth_params {
