@@ -244,9 +244,6 @@ impl SyncSession {
             self.security.as_mut(),
         )?;
         self.req_id += Wrapping(1);
-        println!("Error idx : {:?}", resp.error_index);
-        println!("Error status : {:?}", resp.error_status);
-        resp.clone().varbinds.for_each(|v| print!("Varbind: {:?}", v));
         resp.validate(MessageType::Response, req_id, &self.community)?;
         Ok(resp)
     }
