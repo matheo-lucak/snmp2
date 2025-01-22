@@ -108,7 +108,8 @@ pub enum Error {
     Receive(std::io::ErrorKind),
     /// MIB errors
     Mib(String),
-
+    // No response timeout
+    Timeout,
     UnexpectedReport(ReportError),
 }
 
@@ -137,6 +138,7 @@ impl fmt::Display for Error {
             Error::Send(e) => write!(f, "Socket send error: {}", e),
             Error::Receive(e) => write!(f, "Socket receive error: {}", e),
             Error::Mib(ref s) => write!(f, "MIB error: {}", s),
+            Error::Timeout => write!(f, "timeout"),
             Error::UnexpectedReport(ref s) => write!(f, "Unexpected report: {}", s),
         }
     }

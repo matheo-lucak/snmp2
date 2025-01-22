@@ -149,10 +149,11 @@ impl AsyncSession {
         out: &'a mut [u8],
     ) -> Result<&'a [u8]> {
         let _pdu_len = socket.send(pdu).await.map_err(|e| Error::Send(e.kind()))?;
-        let len = socket
-            .recv(out)
-            .await
-            .map_err(|e| Error::Receive(e.kind()))?;
+        let len = socket.recv(out).await.map_err(|e| match e.kind() {
+            std::io::ErrorKind::WouldBlock => Error::Timeout,
+            e => Error::Receive(e),
+        })?;
+
         Ok(&out[..len])
     }
 
